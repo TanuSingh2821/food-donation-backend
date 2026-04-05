@@ -8,7 +8,9 @@ import notificationRoutes from "./routes/NotificationRoute.js";
 const app = express();
 
 // middlewares
-app.use(cors());
+app.use(cors({
+  origin: "*",
+}));
 app.use(express.json());
 
 // 🔥 serve uploaded images
