@@ -18,7 +18,7 @@ export const addFood = async (req, res) => {
       quantity,
       location: parsedLocation,
       status,
-      image: req.file ? req.file.filename : "",
+      image: req.file ? req.file.path : "",
       donatedBy: donorId || null
     });
 
@@ -38,7 +38,7 @@ export const addFood = async (req, res) => {
       new Notification({
         ngoId: ngo._id,
         foodId: food._id,
-        message: `🍱 New food donated by ${donorName || "A donor"}: "${title}" (${quantity} portions)`
+        message: ` New food donated by ${donorName || "A donor"}: "${title}" (${quantity} portions)`
       }).save()
     );
 
