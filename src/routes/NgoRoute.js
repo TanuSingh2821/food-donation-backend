@@ -5,7 +5,7 @@ import {
   getNearbyFoodsForNGO,
   getClaimedFoods,
   getNGOProfile
-} from "../controllers/ngoController.js";
+} from "../controllers/NgoController.js";
 
 const router = express.Router();
 
