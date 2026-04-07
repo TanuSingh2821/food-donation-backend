@@ -1,4 +1,7 @@
 import express from "express";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+
+
 import {
   registerDonor,
   loginDonor,
@@ -9,6 +12,6 @@ const router = express.Router();
 
 router.post("/register", registerDonor);
 router.post("/login", loginDonor);
-router.get("/dashboard/:donorId", getDonorDashboard);
+router.get("/dashboard/:donorId", authMiddleware, getDonorDashboard);
 
 export default router;

@@ -1,6 +1,7 @@
 import Donor from "../models/DonorModel.js";
 import Food from "../models/Food.js";
-
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 // 📝 REGISTER DONOR
 export const registerDonor = async (req, res) => {
   try {
@@ -8,29 +9,72 @@ export const registerDonor = async (req, res) => {
 
     const existing = await Donor.findOne({ email });
     if (existing) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered"
+      });
     }
 
-    const donor = new Donor({ name, email, password });
+    // 🔥 HASH PASSWORD
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const donor = new Donor({
+      name,
+      email,
+      password: hashedPassword
+    });
+
     await donor.save();
 
-    res.status(201).json({ success: true, message: "Donor registered successfully", donor });
+    res.status(201).json({
+      success: true,
+      message: "Donor registered successfully"
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
 // 🔐 LOGIN DONOR
+
+
 export const loginDonor = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const donor = await Donor.findOne({ email });
-    if (!donor || donor.password !== password) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!donor) {
+      return res.status(401).json({ success: false, message: "User not found" });
     }
 
-    res.json({ success: true, message: "Login successful", donor });
+    // 🔥 bcrypt compare
+    const isMatch = await bcrypt.compare(password, donor.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid password" });
+    }
+
+    // 🔥 JWT TOKEN
+    const token = jwt.sign(
+      { id: donor._id, role: "donor" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      success: true,
+      token,
+      donor: {
+        id: donor._id,
+        name: donor.name,
+        email: donor.email
+      }
+    });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

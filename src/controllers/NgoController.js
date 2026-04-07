@@ -1,6 +1,9 @@
-import NGO from "../models/ngoModel.js";
+//import NGO from "../models/ngoModel.js";
 import Food from "../models/Food.js";
 import { getDistance } from "../utils/distance.js";
+import NGO from "../models/ngoModel.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 
 // 🏢 REGISTER NGO
@@ -8,13 +11,25 @@ export const registerNGO = async (req, res) => {
   try {
     const { name, email, password, location } = req.body;
 
+    const existing = await NGO.findOne({ email });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered"
+      });
+    }
+
     const parsedLocation =
       typeof location === "string" ? JSON.parse(location) : location;
+
+    // 🔥 HASH PASSWORD
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const ngo = new NGO({
       name,
       email,
-      password,
+      password: hashedPassword,
       location: parsedLocation
     });
 
@@ -22,44 +37,66 @@ export const registerNGO = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "NGO registered successfully",
-      ngo
+      message: "NGO registered successfully"
     });
 
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }
 };
+// 🔐 LOGIN NGO
 
-
-// 🔐 LOGIN NGO (basic)
 export const loginNGO = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // 🔍 Check if NGO exists
     const ngo = await NGO.findOne({ email });
-
-    if (!ngo || ngo.password !== password) {
+    if (!ngo) {
       return res.status(401).json({
-        message: "Invalid credentials"
+        success: false,
+        message: "NGO not found"
       });
     }
 
-    res.json({
+    // 🔐 Compare hashed password
+    const isMatch = await bcrypt.compare(password, ngo.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password"
+      });
+    }
+
+    // 🎟️ Generate JWT token
+    const token = jwt.sign(
+      { id: ngo._id, role: "ngo" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // ✅ Send response (NO password)
+    res.status(200).json({
       success: true,
-      message: "Login successful",
-      ngo
+      token,
+      ngo: {
+        id: ngo._id,
+        name: ngo.name,
+        email: ngo.email,
+        location: ngo.location
+      }
     });
 
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }
 };
-
 
 // 📍 GET NEARBY FOODS FOR NGO
 export const getNearbyFoodsForNGO = async (req, res) => {
