@@ -4,14 +4,17 @@ import { getDistance } from "../utils/distance.js";
 
 import Notification from "../models/NotificationModel.js";
 
-
 export const addFood = async (req, res) => {
   try {
-    const { title, quantity, location, status, donorId, donorName } = req.body; // ← donorName add
+    const { title, quantity, location, status, donorName } = req.body;
 
     const parsedLocation =
       typeof location === "string" ? JSON.parse(location) : location;
+
     const { lat, lng } = parsedLocation;
+
+    // 🔥 get donor from JWT
+    const donorId = req.user.id;
 
     const food = new Food({
       title,
@@ -19,32 +22,31 @@ export const addFood = async (req, res) => {
       location: parsedLocation,
       status,
       image: req.file ? req.file.path : "",
-      donatedBy: donorId || null
+      donatedBy: donorId // ✅ FIXED
     });
 
     await food.save();
 
     // 🔥 find nearest NGOs
     const ngos = await NGO.find();
-    const withDistance = ngos.map((ngo) => {
-      const distance = getDistance(lat, lng, ngo.location.lat, ngo.location.lng);
-      return { ...ngo._doc, distance };
-    }).sort((a, b) => a.distance - b.distance);
+    const withDistance = ngos
+      .map((ngo) => {
+        const distance = getDistance(lat, lng, ngo.location.lat, ngo.location.lng);
+        return { ...ngo._doc, distance };
+      })
+      .sort((a, b) => a.distance - b.distance);
 
     const top3 = withDistance.slice(0, 3);
 
-    // 🔔 Save notification for each of top 3 NGOs
     const notifPromises = top3.map((ngo) =>
       new Notification({
         ngoId: ngo._id,
         foodId: food._id,
-        message: ` New food donated by ${donorName || "A donor"}: "${title}" (${quantity} portions)`
+        message: `New food donated by ${donorName || "A donor"}: "${title}" (${quantity} portions)`
       }).save()
     );
 
     await Promise.all(notifPromises);
-
-    console.log("Top NGOs notified:", top3.map(n => n.name));
 
     res.status(201).json({
       success: true,
@@ -56,8 +58,6 @@ export const addFood = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-
 // 📥 GET ALL AVAILABLE FOODS
 export const getFoods = async (req, res) => {
   try {

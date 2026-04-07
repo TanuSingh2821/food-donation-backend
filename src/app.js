@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config(); // ✅ FIRST LINE
+
 import express from "express";
 import cors from "cors";
 import donorRoutes from "./routes/DonorRoute.js";
@@ -13,7 +16,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// 🔥 serve uploaded images
+// serve uploaded images
 app.use("/uploads", express.static("uploads"));
 
 // test routes
@@ -21,15 +24,10 @@ app.get("/", (req, res) => {
   res.send("Main API working 🚀");
 });
 
-app.get("/home", (req, res) => {
-  res.send("API home page");
-});
-
 // main routes
 app.use("/api/food", foodroutes);
 app.use("/api/ngo", ngoRoutes);
-app.use("/api/donor", donorRoutes); 
-
-
+app.use("/api/donor", donorRoutes);
 app.use("/api/notifications", notificationRoutes);
+
 export default app;
